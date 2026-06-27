@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment Successful — AI Agent Notary™</title>
+<meta name="robots" content="noindex">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap');
+  :root{
+    --bg:#0a0a0f; --card:#111125; --border:#1e1a3a; --border2:#2a1f4a;
+    --text:#e8e4f0; --text2:#9ca3c0; --text3:#6b7280;
+    --green:#34d399; --amber:#fbbf24; --red:#f87171;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.7; font-size:15px;
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:2rem 1.25rem;
+  }
+  .wrap{max-width:600px; width:100%;}
+  .state{text-align:center;}
+  .spinner{
+    width:48px; height:48px; border:3px solid var(--border2); border-top-color:#7c3aed;
+    border-radius:50%; margin:0 auto 1.5rem; animation:spin 0.9s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .state h2{font-size:1.3rem; font-weight:700; margin-bottom:0.6rem;}
+  .state p{color:var(--text2); font-size:14px; max-width:420px; margin:0 auto;}
+
+  .success-icon{
+    width:64px; height:64px; border-radius:50%; background:rgba(52,211,153,0.12);
+    border:1px solid rgba(52,211,153,0.3); display:flex; align-items:center; justify-content:center;
+    font-size:28px; margin:0 auto 1.25rem; color:var(--green);
+  }
+
+  .cert-card{
+    background:linear-gradient(160deg,#13112a,#0d0d1e); border:1px solid #3730a3; border-radius:16px;
+    padding:1.75rem; margin-top:1.5rem;
+  }
+  .cert-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem;}
+  .cert-badge{
+    display:inline-flex; align-items:center; gap:6px; background:rgba(52,211,153,0.12);
+    border:1px solid rgba(52,211,153,0.3); color:var(--green); padding:0.3rem 0.8rem;
+    border-radius:100px; font-size:11.5px; font-weight:700;
+  }
+  .cert-id{font-family:'Inter',monospace; font-size:11px; color:var(--text3);}
+  .cert-row{display:flex; justify-content:space-between; padding:0.6rem 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:13.5px; gap:1rem;}
+  .cert-row:last-child{border-bottom:none;}
+  .cert-label{color:var(--text3); white-space:nowrap;}
+  .cert-value{color:var(--text); font-weight:500; text-align:right; word-break:break-all; font-family:'Inter',monospace; font-size:12px;}
+  .hash-box{
+    background:#070712; border:1px solid var(--border2); border-radius:10px; padding:0.9rem;
+    font-family:'Inter',monospace; font-size:11px; color:#a78bfa; word-break:break-all; margin:1rem 0; line-height:1.6;
+  }
+  .btn-primary{
+    background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; border:none; padding:0.85rem 1.6rem;
+    border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; width:100%; margin-top:1rem;
+  }
+  .btn-secondary{
+    background:transparent; color:var(--text); border:1px solid var(--border2); padding:0.85rem 1.6rem;
+    border-radius:10px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; width:100%; margin-top:0.6rem;
+    display:inline-block; text-align:center; text-decoration:none;
+  }
+  .error-box{
+    background:rgba(248,113,113,0.08); border:1px solid rgba(248,113,113,0.25); border-radius:12px;
+    padding:1.5rem; text-align:center;
+  }
+  .error-box p{color:#fca5a5; font-size:13.5px;}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div id="pollingState" class="state">
+    <div class="spinner"></div>
+    <h2>Confirming your payment...</h2>
+    <p>We're verifying your payment with Razorpay and generating your certificate. This usually takes just a few seconds — please don't close this page.</p>
+  </div>
+
+  <div id="successState" class="state" style="display:none;">
+    <div class="success-icon">✓</div>
+    <h2>Payment Successful</h2>
+    <p>Your AI Agent Notary certificate has been generated and cryptographically verified.</p>
+
+    <div class="cert-card">
+      <div class="cert-header">
+        <span class="cert-badge">✓ Certificate Generated</span>
+        <span class="cert-id" id="certIdShort"></span>
+      </div>
+      <div class="cert-row"><span class="cert-label">Notary ID (UUID)</span><span class="cert-value" id="resAgentId"></span></div>
+      <div class="cert-row"><span class="cert-label">Agent Name</span><span class="cert-value" id="resAgentName"></span></div>
+      <div class="cert-row"><span class="cert-label">Owner Company</span><span class="cert-value" id="resOwner"></span></div>
+      <div class="cert-row"><span class="cert-label">Model</span><span class="cert-value" id="resModel"></span></div>
+      <div class="cert-row"><span class="cert-label">Jurisdiction</span><span class="cert-value" id="resJurisdiction"></span></div>
+      <div class="cert-row"><span class="cert-label">EU AI Act Classification</span><span class="cert-value" id="resRiskClass"></span></div>
+      <div class="cert-row"><span class="cert-label">Issued On</span><span class="cert-value" id="resTimestamp"></span></div>
+      <div class="cert-row"><span class="cert-label">Payment ID</span><span class="cert-value" id="resPaymentId"></span></div>
+
+      <div class="hash-box" id="resHash"></div>
+
+      <button class="btn-primary" onclick="downloadCertificate()">📄 Download Certificate PDF</button>
+    </div>
+
+    <a href="/" class="btn-secondary">Back to Home</a>
+  </div>
+
+  <div id="errorState" class="state" style="display:none;">
+    <div class="error-box">
+      <h2 style="color:#f87171; margin-bottom:0.75rem;">We couldn't confirm your certificate</h2>
+      <p id="errorText">Your payment may still be processing. If this persists for more than a few minutes, please contact support with your order reference.</p>
+      <a href="/" class="btn-secondary" style="margin-top:1.25rem;">Back to Home</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const orderId = params.get('order_id');
+
+let certData = null;
+let pollAttempts = 0;
+const MAX_POLL_ATTEMPTS = 30; // ~60 seconds at 2s interval
+const POLL_INTERVAL_MS = 2000;
+
+function showState(name){
+  document.getElementById('pollingState').style.display = name === 'polling' ? 'block' : 'none';
+  document.getElementById('successState').style.display = name === 'success' ? 'block' : 'none';
+  document.getElementById('errorState').style.display = name === 'error' ? 'block' : 'none';
+}
+
+async function pollCertificateStatus(){
+  if(!orderId){
+    showState('error');
+    document.getElementById('errorText').textContent = 'No order reference found. If you completed a payment, please contact support.';
+    return;
+  }
+
+  pollAttempts++;
+
+  try {
+    const res = await fetch('/api/check-certificate-status?order_id=' + encodeURIComponent(orderId));
+    const data = await res.json();
+
+    if(data.status === 'paid' && data.certificate){
+      certData = data.certificate;
+      renderCertificate(certData);
+      showState('success');
+      return; // stop polling
+    }
+
+    if(pollAttempts >= MAX_POLL_ATTEMPTS){
+      showState('error');
+      document.getElementById('errorText').textContent =
+        'Your payment is taking longer than expected to confirm. This can happen occasionally — please check back in a few minutes or contact support with order ID: ' + orderId;
+      return;
+    }
+
+    // still pending — webhook hasn't fired yet, poll again
+    setTimeout(pollCertificateStatus, POLL_INTERVAL_MS);
+  } catch(err){
+    console.error('Status check failed:', err);
+    if(pollAttempts >= MAX_POLL_ATTEMPTS){
+      showState('error');
+      document.getElementById('errorText').textContent = 'Something went wrong checking your certificate status. Please contact support with order ID: ' + orderId;
+      return;
+    }
+    setTimeout(pollCertificateStatus, POLL_INTERVAL_MS);
+  }
+}
+
+function renderCertificate(cert){
+  document.getElementById('certIdShort').textContent = '#' + cert.agentId.slice(0,8);
+  document.getElementById('resAgentId').textContent = cert.agentId;
+  document.getElementById('resAgentName').textContent = cert.agentName;
+  document.getElementById('resOwner').textContent = cert.ownerCompany;
+  document.getElementById('resModel').textContent = cert.modelUsed;
+  document.getElementById('resJurisdiction').textContent = cert.jurisdiction;
+  document.getElementById('resRiskClass').textContent = cert.euClassification;
+  document.getElementById('resTimestamp').textContent = new Date(cert.issuedAt).toLocaleString('en-US');
+  document.getElementById('resPaymentId').textContent = cert.razorpayPaymentId || 'N/A';
+  document.getElementById('resHash').textContent = 'SHA-256: ' + cert.sha256Hash;
+}
+
+function downloadCertificate(){
+  if(!certData) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'pt', format:'a4'});
+  const pageWidth = doc.internal.pageSize.getWidth();
+  let y = 60;
+
+  doc.setFillColor(13,13,26);
+  doc.rect(0,0,pageWidth,120,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(22);
+  doc.text('AI Agent Notary', 50, 55);
+  doc.setFontSize(11);
+  doc.setTextColor(180,170,220);
+  doc.text('Cryptographically Verified Agent Compliance Certificate', 50, 78);
+
+  y = 160;
+  doc.setTextColor(20,20,30);
+  doc.setFontSize(14);
+  doc.text('Certificate Details', 50, y);
+  y += 10;
+  doc.setDrawColor(200,200,210);
+  doc.line(50, y, pageWidth-50, y);
+  y += 25;
+
+  const rows = [
+    ['Notary ID (UUID)', certData.agentId],
+    ['Agent Name', certData.agentName],
+    ['Owner Company', certData.ownerCompany],
+    ['AI Model Used', certData.modelUsed],
+    ['Deployment Jurisdiction', certData.jurisdiction],
+    ['Risk Level', certData.riskLevel],
+    ['EU AI Act Classification', certData.euClassification],
+    ['Spending / Approval Limit', certData.spendLimit],
+    ['Permissions Scope', certData.permissionsScope],
+    ['Contact Email', certData.contactEmail],
+    ['Issued On (UTC)', certData.issuedAt],
+    ['Razorpay Payment ID', certData.razorpayPaymentId || 'N/A'],
+  ];
+
+  doc.setFontSize(10);
+  rows.forEach(([label, value])=>{
+    doc.setTextColor(110,110,120);
+    doc.text(label, 50, y);
+    doc.setTextColor(20,20,30);
+    const splitValue = doc.splitTextToSize(String(value), pageWidth-260);
+    doc.text(splitValue, 240, y);
+    y += Math.max(18, splitValue.length*14);
+  });
+
+  y += 15;
+  doc.setDrawColor(200,200,210);
+  doc.line(50, y, pageWidth-50, y);
+  y += 25;
+
+  doc.setFontSize(11);
+  doc.setTextColor(20,20,30);
+  doc.text('Cryptographic Proof (SHA-256)', 50, y);
+  y += 18;
+  doc.setFontSize(8.5);
+  doc.setTextColor(90,60,180);
+  const hashSplit = doc.splitTextToSize(certData.sha256Hash, pageWidth-100);
+  doc.text(hashSplit, 50, y);
+  y += hashSplit.length*12 + 20;
+
+  doc.setFontSize(8);
+  doc.setTextColor(140,140,150);
+  const disclaimer = 'This certificate provides a cryptographic record of AI agent metadata as declared at the time of issuance, verified against a confirmed payment transaction. It is not a legal compliance guarantee or regulatory certification. Consult a qualified legal advisor for EU AI Act conformity assessment.';
+  const discSplit = doc.splitTextToSize(disclaimer, pageWidth-100);
+  doc.text(discSplit, 50, y);
+
+  doc.save('AI-Agent-Notary-Certificate-' + certData.agentId.slice(0,8) + '.pdf');
+}
+
+showState('polling');
+pollCertificateStatus();
+</script>
+
+</body>
+</html>

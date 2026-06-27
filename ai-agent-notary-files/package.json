@@ -1,0 +1,9 @@
+{
+  "name": "ai-agent-notary",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "razorpay": "^2.9.4",
+    "@netlify/blobs": "^8.1.0"
+  }
+}
